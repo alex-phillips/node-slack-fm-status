@@ -6,8 +6,6 @@ require('dotenv').config({
   path: `${__dirname}/.env`,
 });
 
-
-
 let lastfm = new LastFmNode({
   api_key: process.env.LASTFM_KEY,
   secret: process.env.LASTFM_SECRET,
