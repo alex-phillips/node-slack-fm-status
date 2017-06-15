@@ -1,54 +1,84 @@
 #!/usr/bin/env node
-var LastFmNode = require('lastfm').LastFmNode,
-  request = require('request');
+var LastfmAPI = require('lastfmapi'),
+  request = require('request-promise-native');
 
 require('dotenv').config({
   path: `${__dirname}/.env`,
 });
 
-let lastfm = new LastFmNode({
+let lastfm = new LastfmAPI({
   api_key: process.env.LASTFM_KEY,
   secret: process.env.LASTFM_SECRET,
 }),
   username = process.argv[2],
-  trackstream = lastfm.stream(username);
+  currentTracks = [];
 
 if (!username) {
   console.log('No username specified');
   process.exit();
 }
 
-console.log(`Tracking stream for user ${username}`);
-trackstream.on('nowPlaying', function(track) {
-  let response = request.post('https://slack.com/api/users.profile.set', {
-    form: {
-      token: process.env.SLACK_TOKEN,
-      profile: JSON.stringify({
-        "status_text": `${track.name} - ${track.artist['#text']}`,
-        "status_emoji": ':musical_note:',
-      })
+run();
+let getRecentInterval = setInterval(run, 10000);
+
+function run() {
+  lastfm.user.getRecentTracks({
+    // limit: 1,
+    user: username,
+  }, (err, data) => {
+    if (err) {
+      console.log(err);
+      return;
     }
-  }, (err, data, response) => {
-    console.log(`Now playing: ${track.name} - ${track.artist['#text']}`);
+
+    let track = data.track[0],
+      info = `${track.name} - ${track.artist['#text']}`;
+    if (currentTracks.includes(info)) {
+      return;
+    }
+
+    currentTracks.unshift(info);
+    if (currentTracks.length > 2) {
+      currentTracks.pop();
+    }
+
+    currentTrack = info;
+
+    Promise.all(process.env.SLACK_TOKEN.split(',').map(token => {
+      return request.post('https://slack.com/api/users.profile.set', {
+        form: {
+          token: token,
+          profile: JSON.stringify({
+            "status_text": info,
+            "status_emoji": ':musical_note:',
+          })
+        }
+      });
+    }))
+    .then(() => {
+      console.log(`Now playing: ${info}`);
+    });
   });
-});
-
-trackstream.on('scrobbled', function(track) {
-  console.log('Scrobbled: ' + track.name);
-});
-
-trackstream.start();
+}
 
 function exitHandler(options, err) {
-  let response = request.post('https://slack.com/api/users.profile.set', {
-    form: {
-      token: process.env.SLACK_TOKEN,
-      profile: JSON.stringify({
-        "status_text": `Not currently playing`,
-        "status_emoji": ':musical_note:',
-      })
-    }
-  }, (err, data, response) => {
+  if (err) {
+    console.log(err);
+  }
+
+  console.log('Exiting...');
+   Promise.all(process.env.SLACK_TOKEN.split(',').map(token => {
+    return request.post('https://slack.com/api/users.profile.set', {
+      form: {
+        token: process.env.SLACK_TOKEN,
+        profile: JSON.stringify({
+          "status_text": ``,
+          "status_emoji": '',
+        })
+      }
+    });
+  }))
+  .then(() => {
     process.exit();
   });
 }
