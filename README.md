@@ -4,15 +4,16 @@ This app, while running, will update your Slack user status with what is current
 
 ### Install
 
-
-
 ```
 git clone https://github.com/alex-phillips/node-slack-fm-status
 cd node-slack-fm-status
 npm install
+cp .env.example .env
 ```
 
-Once cloned, simply copy the `.env.example` file and fill in the necessary credentials. Then just run `run.js` with your Last.fm username:
+Once cloned, [get your Last.fm API credentials here](https://www.last.fm/api/account/create) and [obtain a Slack authentication token here](https://api.slack.com/custom-integrations/legacy-tokens). 
+
+Open up `.env` and fill in your Last.fm and Slack credentials. Then, run `run.js` with your Last.fm username:
 
 ```
 node run.js LASTFM_USERNAME
