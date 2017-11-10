@@ -32,7 +32,7 @@ function run() {
     }
 
     let track = data.track[0],
-      info = `${track.name} - ${track.artist['#text']}`;
+      info = `${track.artist['#text']} - ${track.name}`;
     if (currentTracks.includes(info)) {
       return;
     }
